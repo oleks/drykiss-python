@@ -45,14 +45,29 @@ class Include(Token):
 		return super(Include, self).__str__() + str(self.libraries)
 
 class Function(Token):
-	pass
+	def __init__(self, match):
+		super(Function, self).__init__(match)
+		self.nameList = []
+		self.parameterList = []
 
 	def __str__(self):
+		base = super(Function, self).__str__()
+		if len(self.nameList) == 0 and len(self.parameterList) == 0:
+			return base
+
 		parameters = []
 		for parameter in self.parameterList:
 			parameters.append(str(parameter))
 		
-		return "%s %s [%s]" % (super(Function, self).__str__(), str(self.nameList), ", ".join(parameters))
+		return "%s %s [%s]" % (base, str(self.nameList), ", ".join(parameters))
+
+class Nil(Token):
+	pass
+
+class Boolean(Token):
+	def __init__(self, match):
+		super(Boolean, self).__init__(match)
+		self.value = match.group(0) == 'true'
 
 class LeftBracket(Token):
 	pass
@@ -111,6 +126,8 @@ class Tokens:
 		(Tab,      rc(r"\t")),\
 		(Include,  rc(r"include")),\
 		(Function, rc(r"fun")),\
+		(Nil,      rc(r"nil")),\
+		(Boolean,  rc(r"true|false")),\
 		(Varname,  rc(r"[a-zA-Z]+")),\
 		(LeftBracket,  rc(r"{")),\
 		(RightBracket, rc(r"}")),\
