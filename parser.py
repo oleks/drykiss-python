@@ -1,10 +1,6 @@
-import os, re, sys
-
+import re, sys, tokens
 from collections import deque
-
-import lexer
 from lexer import Lexer
-
 
 class Grammar:
 	def __init__(self, tokens):
@@ -146,7 +142,7 @@ class Grammar:
 
 		return assign
 
-	def expression(self):
+	def expression(self, previousOperator = None):
 		expressions = [\
 			self.boolean
 			#self.function,\
@@ -154,10 +150,41 @@ class Grammar:
 			#self.variable]
 		]
 
+		continuators = [\
+			tokens.BooleanAnd,\
+			tokens.BooleanOr,\
+			tokens.BinaryAnd,\
+			tokens.BinaryOr,\
+		]
+
+		subexpression = None
+
 		for fun in expressions:
-			result = fun()
-			if result:
-				return result
+			subexpression = fun()
+			if subexpression:
+				break
+		
+		if not subexpression:
+			return
+
+		if not self.tokens[0].__class__ in continuators:
+			if previousOperator != None:
+				previousOperator.addOperand(subexpression)
+			return subexpression
+
+		operator = self.tokens.popleft()
+		
+		if previousOperator == None or  operator.precedance < previousOperator.precedance:
+			operator.addOperand(subexpression)
+			otherExpression = self.expression(operator)
+			if otherExpression == None:
+				raise Exception("Invalid expression!")
+		else:
+			previousOperator.addOperand(subexpression)
+			operator.addOperand(previousOperator)
+			
+		return operator
+
 
 	def boolean(self):
 		if self.tokens[0] != "Boolean":
