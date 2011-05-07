@@ -156,9 +156,9 @@ class Tokens:
 		(Boolean,  rc(r"true|false")),\
 		(Varname,  rc(r"[a-zA-Z]+")),\
 		(BooleanAnd, rc(r"&&")),\
-		(BooleanOr, rc(r"||")),\
+		(BooleanOr, rc(r"\|\|")),\
 		(BinaryAnd, rc(r"&")),\
-		(BinaryOr, rc(r"|")),\
+		(BinaryOr, rc(r"\|")),\
 		(LeftBracket,  rc(r"{")),\
 		(RightBracket, rc(r"}")),\
 		(LeftBrace,    rc(r"\(")),\
