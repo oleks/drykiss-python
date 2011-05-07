@@ -11,18 +11,20 @@ declaration := function | class
 
 function := function-name block
 
-function-name := name ["(" nonempty-parameter-list ")" name] "(" nonempty-parameter-list ")"
+function-name := name ["(" nonempty-parameter-list ")" name] funciton-name-tail
 
 nonempty-parameter-list := varname ["," varname]
-
-parameter-list := $ | nonempty-parameter-list
 
 varname := name (":" type)
 
 type := name
 
+function-name-tail := $ |"(" parameter-list ")"
 
-////
+parameter-list := $ | nonempty-parameter-list
+
+
+//// not implemented beyond this point
 
 
 statement := if-statement | control-statement | function-call
