@@ -2,144 +2,9 @@ import os, re, sys
 
 from collections import deque
 
-import lexer
+import lexer, parser
 from lexer import Lexer
-
-
-class Grammar:
-	def __init__(self):
-		self.ALL = [\
-			# TODO: remove this top one..
-			self.newline,\
-			self.include,\
-			self.assign,\
-			self.expression]
-
-	def newline(self, tokens):
-		while len(tokens) > 0 and tokens[0] == "Newline":
-			tokens.popleft()
-
-	def include(self, tokens):
-		if tokens[0] != "Include":
-			return
-		include = tokens[0]
-		tokens.popleft()
-		while True:
-			if tokens[0] == "Varname":
-				include.append(tokens[0].raw)
-			tokens.popleft()
-			if tokens[0] == "Comma":
-				tokens.popleft()
-			elif tokens[0] == "Newline":
-				tokens.popleft()
-				return include
-			else:
-				raise Exception("Malformed import!")
-
-	def expression(self, tokens):
-		expressions = [\
-			self.function,\
-			self.call,\
-			self.variable]
-
-		for fun in expressions:
-			result = fun(tokens)
-			if result: 
-				return result
-
-	def expressions(self, tokens):
-		result = []
-		while True:
-			expression = self.expression(tokens)
-			if expression:
-				result.append(expression)
-			else:
-				return result
-
-	def function(self, tokens):
-		if tokens[0] != "Varname" or tokens[1] != "MapsTo":
-			return
-
-		mapsto = tokens[1]
-		mapsto.parameters.append(tokens[0].raw)
-		# TODO: allow several parameters
-		
-		tokens.popleft()
-		tokens.popleft()
-
-		mapsto.expressions = self.expressions(tokens)
-		return mapsto
-
-	def call(self, tokens):
-		path = []
-		popped = False
-		while tokens[0] == "Varname" and tokens[1] == "Dot":
-			path.append(tokens[0].raw)
-			tokens.popleft()
-			tokens.popleft()
-			popped = True
-		if not tokens[0] == "Varname" or not tokens[1] == "LeftBrace":
-			if popped:
-				raise Exception("Malformed funcion call!")
-			else:
-				return
-		path.append(tokens[0].raw)
-		tokens.popleft()
-		tokens.popleft()
-		
-		args = []
-
-		while len(tokens) > 0 and tokens[0] != "RightBrace":
-			args.append(self.expression(tokens))
-			if tokens[0] == "Comma":
-				tokens.popleft()
-
-		if tokens[0] == "RightBrace":
-			tokens.popleft()
-		else:
-			raise Exception("Malformed function call!") 
-
-		return Call(path, args)
-
-	def variable(self, tokens):
-		if tokens[0] != "Varname":
-			return
-		variable = tokens[0]
-		tokens.popleft()
-		return variable
-
-	def assign(self, tokens):
-		if len(tokens) < 3 or \
-			tokens[0] != "Varname" or \
-			tokens[1] != "Assign":
-			return
-		assign = tokens[1]
-		assign.variable = tokens[0].raw
-		tokens.popleft()
-		tokens.popleft()
-		assign.value = self.expression(tokens)
-
-		if tokens[0] == "Newline":
-			tokens.popleft()
-
-		return assign
-
-class Parser:
-	def __init__(self, tokens):
-		self.tokens = tokens
-		self.syntree = deque()
-		while len(self.tokens) > 0:
-			self.advance()
-			
-	def advance(self):
-		for grammae in Grammar().ALL:
-			if len(self.tokens) == 0:
-				return
-			syntree = grammar(self.tokens)
-			if syntree:
-				self.syntree.append(syntree)
-				return
-		raise Exception("Wild token %s!" % self.tokens[0])
+from parser import Parser
 
 class Compiler:
 	def __init__(self, syntree):
@@ -219,13 +84,8 @@ class Compiler:
 		return "function(%s){%s}" % (",".join(node.parameters), self.compile(node.expressions))
 
 def kiss(filename):
-	tokens = Lexer(filename).tokens
-	for token in tokens:
-		print token
-	#syntree = Parser(tokens).syntree
-	
-	#for expression in syntree[1]:
-	#	print expression
+	lexer = Lexer(filename)
+	parser = Parser(lexer.tokens)
 
 	#Compiler(syntree)
 
