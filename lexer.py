@@ -69,6 +69,21 @@ class Boolean(Token):
 		super(Boolean, self).__init__(match)
 		self.value = match.group(0) == 'true'
 
+	def __str__(self):
+		return " : ".join([super(Boolean, self).__str__(), str(self.value)])
+
+class BooleanAnd(Token):
+	pass
+
+class BooleanOr(Token):
+	pass
+
+class BinaryAnd(Token):
+	pass
+
+class BinaryOr(Token):
+	pass
+
 class LeftBracket(Token):
 	pass
 
@@ -82,7 +97,13 @@ class RightBrace(Token):
 	pass
 
 class Assign(Token):
-	pass
+	def __init__(self, match):
+		super(Assign, self).__init__(match)
+		self.variable = None
+		self.expression = None
+
+	def __str__(self):
+		return " ".join([super(Assign, self).__str__(), str(self.variable) + " = " + str(self.expression)])
 
 class Dot(Token):
 	pass
@@ -116,7 +137,12 @@ class Varname(Token):
 		self.type = None
 
 	def __str__(self):
-		return "%s : %s : %s" % (self.name, self.raw, self.type)
+		base = "%s : %s" % (self.name, self.raw)
+		if self.type != None:
+			return " : ".join([base, self.type])
+		else:
+			return base
+
 
 class Tokens:
 	SPLITTER = rc(r" +")
@@ -129,6 +155,10 @@ class Tokens:
 		(Nil,      rc(r"nil")),\
 		(Boolean,  rc(r"true|false")),\
 		(Varname,  rc(r"[a-zA-Z]+")),\
+		(BooleanAnd, rc(r"&&")),\
+		(BooleanOr, rc(r"||")),\
+		(BinaryAnd, rc(r"&")),\
+		(BinaryOr, rc(r"|")),\
 		(LeftBracket,  rc(r"{")),\
 		(RightBracket, rc(r"}")),\
 		(LeftBrace,    rc(r"\(")),\

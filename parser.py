@@ -14,7 +14,7 @@ class Grammar:
 			self.newline,\
 			self.include,\
 			self.function,\
-			#self.assign,\
+			self.assign,\
 			#self.expression]
 		]
 
@@ -80,7 +80,7 @@ class Grammar:
 				self.tokens.popleft()
 				return names, parameters
 
-			latestParameters = self.parameterList()
+			latestParameters = self.variableList()
 
 			if self.tokens[0] != "RightBrace":
 				raise Exception("Invalid function name!")
@@ -93,9 +93,9 @@ class Grammar:
 				parameters.extend(latestParameters)
 				
 
-	def parameterList(self):
+	def variableList(self):
 
-		parameters = []
+		variables = []
 
 		if self.tokens[0] != "Varname":
 			return
@@ -105,41 +105,65 @@ class Grammar:
 			if self.tokens[0] != "Varname":
 				raise Exception("Invalid parameter list speicification!")
 
-			parameters.append(self.parameter())
+			variable = self.variable()
+			if variable == None:
+				raise Exception("Bad Variable!")
+
+			variables.append(variable)
 
 			if self.tokens[0] != "Comma":
-				return parameters
+				return variables
 
 			self.tokens.popleft()
 
-		return parameters
-
-	def parameter(self):
+	def variable(self):
 		
 		if self.tokens[0] != "Varname":
-			raise Exception("Invalid variable declaration!")
+			return
 
-		parameter = self.tokens.popleft()
+		variable = self.tokens.popleft()
 
 		if len(self.tokens) > 1 and self.tokens[0] == "Colon" and self.tokens[1] == "Varname":
 			self.tokens.popleft()
-			parameter.type = self.tokens.popleft().raw
+			variable.type = self.tokens.popleft().raw
 
-		return parameter
+		return variable
 
+	def assign(self):
+		variable = self.variable()
+		if variable == None:
+			return
 
-			
-	def expression(self, tokens):
+		if self.tokens[0] != "Assign":
+			return
+
+		assign = self.tokens.popleft()
+		assign.variable = variable
+		assign.expression = self.expression()
+
+		if self.tokens[0] == "Newline":
+			self.tokens.popleft()
+
+		return assign
+
+	def expression(self):
 		expressions = [\
-			self.function,\
+			self.boolean
+			#self.function,\
 			#self.call,\
 			#self.variable]
 		]
 
 		for fun in expressions:
-			result = fun(tokens)
-			if result: 
+			result = fun()
+			if result:
 				return result
+
+	def boolean(self):
+		if self.tokens[0] != "Boolean":
+			return
+		return self.tokens.popleft()
+
 
 	def expressions(self, tokens):
 		result = []
@@ -194,29 +218,6 @@ class Grammar:
 			raise Exception("Malformed function call!") 
 
 		return Call(path, args)
-
-	def variable(self, tokens):
-		if tokens[0] != "Varname":
-			return
-		variable = tokens[0]
-		tokens.popleft()
-		return variable
-
-	def assign(self, tokens):
-		if len(tokens) < 3 or \
-			tokens[0] != "Varname" or \
-			tokens[1] != "Assign":
-			return
-		assign = tokens[1]
-		assign.variable = tokens[0].raw
-		tokens.popleft()
-		tokens.popleft()
-		assign.value = self.expression(tokens)
-
-		if tokens[0] == "Newline":
-			tokens.popleft()
-
-		return assign
 
 class Parser:
 	def __init__(self, tokens):
