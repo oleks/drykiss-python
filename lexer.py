@@ -41,8 +41,18 @@ class Include(Token):
 	def append(self, element):
 		self.libraries.append(element)
 
-class Class(Token):
+	def __str__(self):
+		return super(Include, self).__str__() + str(self.libraries)
+
+class Function(Token):
 	pass
+
+	def __str__(self):
+		parameters = []
+		for parameter in self.parameterList:
+			parameters.append(str(parameter))
+		
+		return "%s %s [%s]" % (super(Function, self).__str__(), str(self.nameList), ", ".join(parameters))
 
 class LeftBracket(Token):
 	pass
@@ -65,6 +75,12 @@ class Dot(Token):
 class Comma(Token):
 	pass
 
+class Colon(Token):
+	pass
+
+class Semicolon(Token):
+	pass
+
 class MapsTo(Token):
 	def __init__(self, match):
 		super(MapsTo, self).__init__(match)
@@ -82,24 +98,27 @@ class Call(SyntaxObject):
 class Varname(Token):
 	def __init__(self, match):
 		super(Varname, self).__init__(match)
+		self.type = None
 
 	def __str__(self):
-		return self.name + " : " + self.raw
+		return "%s : %s : %s" % (self.name, self.raw, self.type)
 
 class Tokens:
 	SPLITTER = rc(r" +")
 
 	ALL = [\
-		(Newline, rc(r"\r?\n")),\
-		(Tab,     rc(r"\t")),\
-		(Include, rc(r"include")),\
-		(Varname, rc(r"[a-zA-Z]+")),\
-		(Class,   rc(r"class")),\
+		(Newline,  rc(r"\r?\n")),\
+		(Tab,      rc(r"\t")),\
+		(Include,  rc(r"include")),\
+		(Function, rc(r"fun")),\
+		(Varname,  rc(r"[a-zA-Z]+")),\
 		(LeftBracket,  rc(r"{")),\
 		(RightBracket, rc(r"}")),\
 		(LeftBrace,    rc(r"\(")),\
 		(RightBrace,   rc(r"\)")),\
 		(Dot,     rc(r"\.")),\
+		(Colon,   rc(r":")),\
+		(Semicolon, rc(r";")),\
 		(Comma,   rc(r",")),\
 		(MapsTo,  rc("=>")),\
 		(Assign,  rc(r"="))]

@@ -132,10 +132,10 @@ class Parser:
 			self.advance()
 			
 	def advance(self):
-		for match in Grammar().ALL:
+		for grammae in Grammar().ALL:
 			if len(self.tokens) == 0:
 				return
-			syntree = match(self.tokens)
+			syntree = grammar(self.tokens)
 			if syntree:
 				self.syntree.append(syntree)
 				return

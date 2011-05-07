@@ -1,0 +1,43 @@
+lines := inlcude | declaration | assignment | statement
+
+
+include := "include" name-list
+
+name-list := name ["," name-list]
+
+
+
+declaration := function | class
+
+function := function-name block
+
+function-name := name ["(" nonempty-parameter-list ")" name] "(" nonempty-parameter-list ")"
+
+nonempty-parameter-list := varname ["," varname]
+
+parameter-list := $ | nonempty-parameter-list
+
+varname := name (":" type)
+
+type := name
+
+
+////
+
+
+statement := if-statement | control-statement | function-call
+
+
+if-statement := "if" boolean block "else" block
+
+block := start-block lines end-block
+
+
+control-statement := "return"
+
+
+function-call := dot-path function-name
+
+dot-path := [name "."]
+
+
