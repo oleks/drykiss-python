@@ -5,18 +5,64 @@ from lexer import Lexer
 class Grammar:
 	def __init__(self, tokens):
 		self.tokens = tokens
-		self.ALL = [\
-			# TODO: remove this top one..
-			self.newline,\
-			self.include,\
-			self.function,\
-			self.assign,\
-			#self.expression]
+		self.all = [ \
+			# TODO: remove these top two..
+			self.newline, \
+			self.tab, \
+			self.include, \
+			self.statement \
 		]
 
+		self.statements = [ \
+			self.boolean, \
+			self.number, \
+			self.varname, \
+			#self.function,\
+			#self.call,\
+			#self.variable]
+		]
+
+
+		self.operatorstack = deque()
+
+	def parse(self, skipTab = False, level = 0):
+		if len(self.tokens) == 0:
+			return None
+		
+		skip = ["Newline"]
+		if skipTab:
+			skip.append("Tab")
+
+		for fun in self.all:
+			result = fun()
+
+			if result in skip:
+				if len(self.tokens) == 0:
+					return None
+				continue
+			
+			if result != None:
+				return result
+		
+		return None
+
+	def peak(self, index = 0):
+		if index >= len(self.tokens):
+			return None
+		return self.tokens[index]
+
+	def advance(self):
+		return self.tokens.popleft()
+
 	def newline(self):
-		while len(self.tokens) > 0 and self.tokens[0] == "Newline":
-			self.tokens.popleft()
+		if self.peak() != "Newline":
+			return None
+		return self.advance()
+
+	def tab(self):
+		if self.peak() != "Tab":
+			return None
+		return self.advance()
 
 	def include(self):
 		
@@ -42,64 +88,58 @@ class Grammar:
 			else:
 				raise Exception("Malformed import!")
 
-	def function(self):
-		if self.tokens[0] != "Function":
+	def statement(self):
+		statement = None
+		for fun in self.statements:
+			statement = fun()
+			if statement != None:
+				break
+
+		return statement
+		
+	def varname(self):
+		
+		varname = self.peak()
+
+		if varname != "Varname":
 			return
 
-		function = self.tokens.popleft()
-
-		function.nameList, function.parameterList = self.functionName()
-
-		return function
-
-	def functionName(self):
-		
-		names = []
-		parameters = []
-
-		if self.tokens[0] != "Varname":
-			raise Exception("Invalid function name!")
+		varname.nameList = [self.advance().raw]
+		varname.varList = []
 
 		while True:
-			
-			if self.tokens[0] != "Varname":
-				return names, parameters
 
-			names.append(self.tokens.popleft().raw)
-
-			if self.tokens[0] != "LeftBrace":
-				return names, parameters
-			
-			self.tokens.popleft()
-
-			if self.tokens[0] == "RightBrace":
-				self.tokens.popleft()
-				return names, parameters
-
-			latestParameters = self.variableList()
-
-			if self.tokens[0] != "RightBrace":
-				raise Exception("Invalid function name!")
-
-			self.tokens.popleft()
-
-			if len(latestParameters) == 0:
-				return names, parameters
-			else:
-				parameters.extend(latestParameters)
+			if self.peak() == "LeftBrace":
+				self.advance()
 				
+				varList = self.varList()
+				
+				if self.peak() != "RightBrace":
+					raise Exception("Invalid parameter list end!")
+				self.advance()
 
-	def variableList(self):
+				if len(varList) == 0:
+					return varname
+				varname.varList.append(varList)
+			
+			if self.peak() != "Varname":
+				break
+			varname.nameList.append(self.advance().raw)
+
+		if self.peak() == "Assign":
+			return self.assignment(varname)
+		
+		# TODO: perhaps varname can spread lines?
+		return varname
+
+	def varList(self):
 
 		variables = []
 
-		if self.tokens[0] != "Varname":
-			return
-
 		while True:
 
-			if self.tokens[0] != "Varname":
-				raise Exception("Invalid parameter list speicification!")
+			if self.peak() != "Varname":
+				return variables
 
 			variable = self.variable()
 			if variable == None:
@@ -107,65 +147,120 @@ class Grammar:
 
 			variables.append(variable)
 
-			if self.tokens[0] != "Comma":
-				return variables
-
-			self.tokens.popleft()
+			if self.peak() == "Comma":
+				self.advance()
 
 	def variable(self):
 		
-		if self.tokens[0] != "Varname":
-			return
+		if self.peak() != "Varname":
+			return None
 
-		variable = self.tokens.popleft()
+		variable = self.advance()
 
-		if len(self.tokens) > 1 and self.tokens[0] == "Colon" and self.tokens[1] == "Varname":
-			self.tokens.popleft()
-			variable.type = self.tokens.popleft().raw
+		if len(self.tokens) > 1 and self.peak() == "Colon" and self.peak(1) == "Varname":
+			self.advance()
+			variable.type = self.advance().raw
 
 		return variable
+	
+	def assignment(self, varname):
+		assignment = self.advance()
+		assignment.varname = varname
+	
+		next = self.peak()
 
-	def assign(self):
-		variable = self.variable()
-		if variable == None:
-			return
+		if next == "Newline":
+			self.advance()
+			print "ADVANCE"
+			assignment.expression = self.block()
+		elif next == "LeftBracket":	
+			assignment.expression = self.block(next, startsOnSameLine = True)
+		else:
+			assignment.expression = self.expression(next)
 
-		if self.tokens[0] != "Assign":
-			return
+		return assignment
 
-		assign = self.tokens.popleft()
-		assign.variable = variable
-		assign.expression = self.expression()
+	def skipNewline(self):
+		self.newline()
 
-		if self.tokens[0] == "Newline":
-			self.tokens.popleft()
+	def block(self, next = None, startsOnSameLine = False):
+		if next == None:
+			next = self.peak()
+		
+		print next
 
-		return assign
+		if startsOnSameLine or next == "LeftBracket":
+			return self.bracketBlock()
+		elif next == "Tab":
+			return self.indentBlock()
+		else:
+			raise Exception("Invalid block!")
+
+	def bracketBlock(self):
+		self.advance()
+		statements = []
+		while True:
+			syntree = self.parse(skipTab = True)
+			if syntree != None:
+				statements.append(syntree)
+				continue
+
+			print self.peak()
+
+			if self.peak() != "RightBracket":
+				raise Exception("Bad bracketed block!")
+			self.advance()
+
+			return statements
+
+	
+	def indentBlock(self, level = 1):
+		statements = []
+		while True:
+			tab = self.peak()
+			if tab.__class__ != tokens.Tab or tab.count != level:
+				return statements	
+			self.advance()
+			syntree = self.parse()
+			if self.peak() == "Newline":
+				self.advance()
+			if syntree != None:
+				statements.append(syntree)
+				continue
+
+			return statements
 
 	def expression(self, previousOperator = None):
-		expressions = [\
-			self.boolean
-			#self.function,\
-			#self.call,\
-			#self.variable]
-		]
-
-		continuators = [\
+		operators = [\
 			tokens.BooleanAnd,\
 			tokens.BooleanOr,\
 			tokens.BinaryAnd,\
 			tokens.BinaryOr,\
+			tokens.Plus,\
+			tokens.Minus,\
+			tokens.Times,\
+			tokens.Divide,\
 		]
 
-		subexpression = None
+
+		statement = self.statement()
+
+		return statement
 
 		for fun in expressions:
 			subexpression = fun()
 			if subexpression:
 				break
-		
+	
 		if not subexpression:
 			return
+
+		if self.tokens[0].__class__ in operators:
+			if len(self.operatorstack) == 0:
+				self.operatorstack.append(self.tokens.popleft())
+			#else:
+				
+	
 
 		if not self.tokens[0].__class__ in continuators:
 			if previousOperator != None:
@@ -173,21 +268,27 @@ class Grammar:
 			return subexpression
 
 		operator = self.tokens.popleft()
+		print operator, previousOperator
 		
-		if previousOperator == None or  operator.precedance < previousOperator.precedance:
+		if previousOperator == None or operator.precedance < previousOperator.precedance:
 			operator.addOperand(subexpression)
-			otherExpression = self.expression(operator)
-			if otherExpression == None:
-				raise Exception("Invalid expression!")
 		else:
 			previousOperator.addOperand(subexpression)
 			operator.addOperand(previousOperator)
-			
+		
+		otherExpression = self.expression(operator)
+		if otherExpression == None:
+			raise Exception("Invalid expression!")
 		return operator
 
 
 	def boolean(self):
 		if self.tokens[0] != "Boolean":
+			return
+		return self.tokens.popleft()
+
+	def number(self):
+		if self.tokens[0] != "Number":
 			return
 		return self.tokens.popleft()
 
@@ -250,17 +351,25 @@ class Parser:
 	def __init__(self, tokens):
 		self.tokens = tokens
 		self.syntree = deque()
-		while len(self.tokens) > 0:
-			self.advance()
-			
-	def advance(self):
-		for grammar in Grammar(self.tokens).ALL:
-			if len(self.tokens) == 0:
-				return
-			syntree = grammar()
-			if syntree:
-				return self.syntree.append(syntree)
-		raise Exception("Wild token %s!" % self.tokens[0])
+		self.grammar = Grammar(self.tokens)
+		self.parse()
+
+	def parse(self):
+		while True:
+			syntree = self.grammar.parse()
+			if syntree != None:
+				self.syntree.append(syntree)
+				continue
+
+			self.dropTrailingWhitespace()
+			if len(self.tokens) > 0:
+				raise Exception("Wild token %s!" % self.tokens[0])
+			return
+
+	def dropTrailingWhitespace(self):
+		whitespace = ["Newline", "Tab"]
+		while len(self.tokens) > 0 and self.tokens[0] in whitespace:
+			self.tokens.popleft()
 
 def main():
 	if len(sys.argv) != 2:

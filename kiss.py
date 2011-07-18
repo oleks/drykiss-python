@@ -87,6 +87,7 @@ def kiss(filename):
 	lexer = Lexer(filename)
 	parser = Parser(lexer.tokens)
 
+	print parser.syntree[2]
 	#Compiler(syntree)
 
 def main():

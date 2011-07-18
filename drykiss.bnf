@@ -43,3 +43,24 @@ function-call := dot-path function-name
 dot-path := [name "."]
 
 
+varname ::= name name-arg-list
+name-arg-list ::= e
+name-arg-list ::= arg-list name name-arg-list
+
+name ::= token name
+name ::= \ CRLF name
+
+
+if this is a number
+  print this
+else
+	print that
+
+if value, true block else false block =
+
+1. define precedance for functions.
+
+2. spaces allowed when declaring/using functions -- however these do not
+distinguish a name, i.e. for all intents and purposes the spaces might as well
+not be there.
+
